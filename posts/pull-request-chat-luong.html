@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Làm thế nào để viết Pull Request mà reviewer thích mê — tuanta</title>
+  <meta name="description" content="Những thói quen tạo PR chất lượng cao: mô tả rõ ràng, tách nhỏ commits, checklist tự review." />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<main>
+  <div class="container">
+
+    <nav class="breadcrumb">
+      <a href="../index.html">Trang chủ</a>
+      <span class="breadcrumb__sep">/</span>
+      <a href="../index.html#posts">Bài viết</a>
+      <span class="breadcrumb__sep">/</span>
+      <span>Pull Request chất lượng</span>
+    </nav>
+
+    <header class="article-header">
+      <div class="article-header__tags">
+        <span class="tag tag--cat">Career</span>
+        <span class="tag">Soft Skill</span>
+      </div>
+      <h1 class="article-title">Làm thế nào để viết Pull Request mà reviewer "thích mê"</h1>
+      <div class="article-meta">
+        <span class="article-meta__author">
+          <span class="article-meta__avatar">TA</span>
+          Tuan Anh
+        </span>
+        <span class="article-meta__sep">·</span>
+        <span>8 tháng 1, 2026</span>
+        <span class="article-meta__sep">·</span>
+        <span>⏱ 6 phút đọc</span>
+      </div>
+    </header>
+
+    <div class="post-layout">
+      <article class="article-body">
+
+        <p>
+          Code review là một trong những thực hành tốt nhất của software engineering.
+          Nhưng review chỉ có giá trị khi Pull Request được viết tốt. Một PR mơ hồ, khổng lồ,
+          không có context sẽ nhận được review qua loa hoặc bị trì hoãn vô thời hạn.
+          Mình đã từng ở cả hai phía — person tạo PR và reviewer — và đây là những gì mình học được.
+        </p>
+
+        <h2 id="kich-thuoc-pr">Kích thước PR: nhỏ thôi, nhưng đủ ngữ nghĩa</h2>
+
+        <p>
+          Nguyên tắc vàng: <strong>một PR — một mục tiêu</strong>. Không phải một PR cho cả sprint.
+        </p>
+
+        <p>
+          Nghiên cứu từ SmartBear cho thấy: reviewer hầu như không thể review hiệu quả hơn
+          <strong>400 dòng code</strong> trong một lần. Quá đó, defect detection rate giảm đáng kể.
+        </p>
+
+        <ul>
+          <li>Refactor riêng → feature riêng → bug fix riêng</li>
+          <li>Nếu thay đổi DB schema, tách thành PR migration trước, PR code sau</li>
+          <li>Dùng feature flag để merge code chưa sẵn sàng mà không ảnh hưởng production</li>
+        </ul>
+
+        <h2 id="mo-ta-pr">Mô tả PR: đừng để reviewer đoán mò</h2>
+
+        <p>Đây là template mình dùng cho mọi PR:</p>
+
+<pre><code>## Vấn đề
+Mô tả ngắn gọn vấn đề đang giải quyết. Link issue/ticket nếu có.
+
+## Giải pháp
+Mình đã làm gì và tại sao chọn cách này thay vì cách khác.
+
+## Thay đổi chính
+- [ ] Thêm endpoint POST /api/v2/orders
+- [ ] Cập nhật schema: thêm column discount_amount
+- [ ] Viết migration và rollback script
+
+## Cách test
+1. Chạy `docker compose up`
+2. Gọi API: `curl -X POST localhost:8080/api/v2/orders -d '{"item_id": 1}'`
+3. Kiểm tra response có trường discount_amount
+
+## Screenshot (nếu có UI)
+[Trước] / [Sau]
+
+## Lưu ý cho reviewer
+Phần logic tính discount ở file `pricing/calculator.go:45` có thể
+gây tranh luận — mình chọn approach này vì lý do X, nhưng muốn nghe ý kiến.
+</code></pre>
+
+        <h2 id="commit-message">Commit message rõ ràng</h2>
+
+        <p>
+          Mỗi commit trong PR nên là một đơn vị logic hoàn chỉnh và có thể hiểu độc lập.
+          Mình theo <strong>Conventional Commits</strong>:
+        </p>
+
+<pre><code>feat(orders): add discount calculation for premium users
+
+Discount is computed based on the user's tier (silver: 5%, gold: 10%,
+platinum: 15%). Applied before tax calculation.
+
+Closes #234
+</code></pre>
+
+        <p>Và những thứ cần <strong>tránh</strong>:</p>
+
+<pre><code>fix               ← fix gì?
+WIP               ← không nên push WIP lên
+asdfasdf          ← thực sự mình đã thấy điều này
+addressed review  ← cụ thể hơn đi</code></pre>
+
+        <h2 id="self-review">Tự review trước khi request review</h2>
+
+        <p>
+          Trước khi assign reviewer, hãy tự review PR của mình như một người ngoài.
+          Checklist của mình:
+        </p>
+
+        <ul>
+          <li>Mình có thể giải thích từng thay đổi không? Nếu không — refactor hoặc thêm comment.</li>
+          <li>Có dead code, debug log, <code>TODO</code> không xử lý không?</li>
+          <li>Tests có cover happy path, edge case và error case không?</li>
+          <li>Có breaking change nào ảnh hưởng consumer hiện tại không?</li>
+          <li>Migrations có rollback script không?</li>
+          <li>Secrets, hardcoded URL, creds có bị commit không?</li>
+        </ul>
+
+        <h2 id="review-la-hop-tac">Review là hợp tác, không phải tòa án</h2>
+
+        <p>
+          Khi comment, phân biệt rõ: đây là <em>blocking</em> (phải sửa) hay <em>suggestion</em>
+          (có thể xem xét)? Một cách mình hay dùng:
+        </p>
+
+<pre><code>[blocking] Logic này sẽ lỗi khi user_id là null — cần add nil check
+
+[nit]      Có thể dùng strings.Builder thay vì concatenation cho performance
+           tốt hơn, nhưng không bắt buộc trong context này
+
+[question] Tại sao chọn Redis thay vì local cache ở đây? Muốn hiểu thêm</code></pre>
+
+        <p>
+          Khi nhận comment, đừng defensive. Nếu đồng ý — sửa và xác nhận. Nếu không —
+          giải thích lý do và thảo luận. Mục tiêu là code tốt hơn, không phải ai thắng.
+        </p>
+
+        <h2 id="ket-luan">Kết luận</h2>
+
+        <p>
+          PR tốt không chỉ là code đúng. Nó là <strong>giao tiếp</strong> — với reviewer hiện tại
+          và với người maintain code sau này. Đầu tư 15 phút viết mô tả tốt có thể tiết kiệm
+          hàng giờ review và back-and-forth.
+        </p>
+
+        <blockquote>
+          <p>Code được đọc nhiều hơn được viết. PR được review nhiều hơn được tạo.</p>
+        </blockquote>
+
+        <hr />
+
+        <p><em>Team bạn có template PR không? Nếu chưa, có lẽ đây là thứ nên đề xuất tuần tới.</em></p>
+
+      </article>
+
+      <aside class="toc">
+        <p class="toc__title">Mục lục</p>
+        <div id="toc"></div>
+      </aside>
+    </div>
+
+  </div>
+
+  <div class="container">
+    <nav class="post-nav">
+      <a href="postgresql-index.html" class="post-nav__item">
+        <span class="post-nav__label">← Bài trước</span>
+        <span class="post-nav__title">Tối ưu PostgreSQL: Index không phải là cây đũa thần</span>
+      </a>
+      <a href="golang-bat-dau.html" class="post-nav__item post-nav__item--next">
+        <span class="post-nav__label">Bài tiếp theo →</span>
+        <span class="post-nav__title">Bắt đầu với Go — ngôn ngữ của sự đơn giản và hiệu năng cao</span>
+      </a>
+    </nav>
+  </div>
+</main>
+
+<script src="../shared.js"></script>
+</body>
+</html>

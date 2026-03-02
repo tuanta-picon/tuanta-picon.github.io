@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kiến trúc Microservices: từ lý thuyết đến thực tế — tuanta</title>
+  <meta name="description" content="Những gì mình học được sau 2 năm làm việc với hệ thống Microservices trong dự án thực." />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<main>
+  <div class="container">
+
+    <nav class="breadcrumb">
+      <a href="../index.html">Trang chủ</a>
+      <span class="breadcrumb__sep">/</span>
+      <a href="../index.html#posts">Bài viết</a>
+      <span class="breadcrumb__sep">/</span>
+      <span>Kiến trúc Microservices</span>
+    </nav>
+
+    <header class="article-header">
+      <div class="article-header__tags">
+        <span class="tag tag--featured">Nổi bật</span>
+        <span class="tag tag--cat">Backend</span>
+        <span class="tag">Architecture</span>
+      </div>
+      <h1 class="article-title">Kiến trúc Microservices: từ lý thuyết đến thực tế trong dự án thực</h1>
+      <div class="article-meta">
+        <span class="article-meta__author">
+          <span class="article-meta__avatar">TA</span>
+          Tuan Anh
+        </span>
+        <span class="article-meta__sep">·</span>
+        <span>28 tháng 2, 2026</span>
+        <span class="article-meta__sep">·</span>
+        <span>⏱ 12 phút đọc</span>
+      </div>
+    </header>
+
+    <div class="post-layout">
+      <article class="article-body">
+
+        <p>
+          Microservices không còn là buzzword xa lạ — từ các startup lẫn tập đoàn lớn đều đang
+          áp dụng kiến trúc này. Nhưng khoảng cách giữa <em>đọc hiểu lý thuyết</em> và
+          <em>triển khai thực tế</em> đôi khi rất lớn. Bài viết này là những gì mình đúc kết
+          sau hơn 2 năm làm việc với một hệ thống có hàng chục services, phục vụ hàng triệu
+          request mỗi ngày.
+        </p>
+
+        <h2 id="microservices-la-gi">Microservices là gì — và khi nào nên dùng?</h2>
+
+        <p>
+          Microservices là kiến trúc chia ứng dụng thành tập hợp các service nhỏ, mỗi service
+          chạy độc lập, giao tiếp qua API (thường là HTTP/REST hoặc gRPC) hoặc message queue.
+          Mỗi service có thể được build, deploy và scale riêng biệt.
+        </p>
+
+        <p>
+          Câu hỏi quan trọng hơn là: <strong>khi nào thì nên dùng?</strong> Câu trả lời
+          thực sự là "không phải lúc đầu". Monolith trước, khi hệ thống phức tạp và team
+          đủ lớn thì mới tách. Martin Fowler gọi đây là <em>Monolith First</em>.
+        </p>
+
+        <blockquote>
+          <p>"You shouldn't start a new project with microservices, even if you're sure your application will be large enough to make it worthwhile." — Martin Fowler</p>
+        </blockquote>
+
+        <h2 id="nhung-thach-thuc-thuc-te">Những thách thức thực tế</h2>
+
+        <h3 id="distributed-tracing">1. Distributed tracing — debug trong mê cung</h3>
+
+        <p>
+          Với monolith, khi có lỗi bạn chỉ cần xem log ở một chỗ. Với microservices, một request
+          có thể đi qua 8–10 services. Nếu không có distributed tracing, tìm nguồn gốc lỗi
+          là cơn ác mộng.
+        </p>
+
+        <p>
+          Giải pháp: cài <strong>OpenTelemetry</strong> + một backend như Jaeger hoặc Tempo.
+          Mọi request đều mang một <code>trace-id</code> duy nhất, lan truyền qua toàn bộ hệ thống.
+        </p>
+
+<pre><code># Ví dụ header truyền trace context
+X-Trace-Id: 4bf92f3577b34da6a3ce929d0e0e4736
+X-Span-Id: 00f067aa0ba902b7
+traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</code></pre>
+
+        <h3 id="data-consistency">2. Data consistency — không còn ACID dễ dàng</h3>
+
+        <p>
+          Trong monolith, bạn có thể dùng database transaction để đảm bảo tính nhất quán.
+          Trong microservices, mỗi service thường có database riêng. Khi cần thao tác trải
+          dài nhiều service, bạn phải dùng <strong>Saga pattern</strong> hoặc
+          <strong>eventual consistency</strong>.
+        </p>
+
+        <p>
+          Đây là một trong những thứ khó nhất khi chuyển sang microservices. Mình đã mất
+          2 sprint để refactor một flow thanh toán vì thiếu cơ chế rollback khi service
+          inventory thất bại sau khi service payment đã trừ tiền.
+        </p>
+
+        <h3 id="service-discovery">3. Service discovery và load balancing</h3>
+
+        <p>
+          Khi service được scale lên nhiều instance, làm sao biết gọi vào IP nào?
+          Giải pháp phổ biến: Kubernetes service + DNS, hoặc service mesh như Istio/Linkerd.
+          Consul cũng là lựa chọn nếu bạn chưa dùng Kubernetes.
+        </p>
+
+        <h2 id="nhung-gi-minh-hoc-duoc">Những gì mình học được</h2>
+
+        <p>
+          Sau 2 năm, đây là các nguyên tắc mình luôn nhớ khi thiết kế service mới:
+        </p>
+
+        <ul>
+          <li><strong>Tách theo business domain</strong>, không phải theo layer kỹ thuật. Một service "User" tốt hơn nhiều so với service "Database Layer".</li>
+          <li><strong>API contract là xương sống</strong>. Document rõ ràng và versioning API từ đầu. Breaking change là kẻ thù số một trong microservices.</li>
+          <li><strong>Async-first khi có thể</strong>. Kafka hoặc RabbitMQ cho các flow không cần response ngay lập tức. Giảm coupling và tăng resilience.</li>
+          <li><strong>Health check và circuit breaker</strong> là bắt buộc. Pattern circuit breaker (Hystrix, Resilience4j) ngăn cascade failure khi một service chết.</li>
+          <li><strong>Đừng chia nhỏ quá sớm</strong>. "Nano-service" còn nguy hiểm hơn monolith — overhead giao tiếp quá cao, khó maintain.</li>
+        </ul>
+
+        <h2 id="ket-luan">Kết luận</h2>
+
+        <p>
+          Microservices giải quyết được nhiều vấn đề — scalability theo từng component, team
+          autonomy, deploy độc lập. Nhưng đổi lại là độ phức tạp cao hơn đáng kể ở tầng
+          infrastructure và operational.
+        </p>
+
+        <p>
+          Nếu bạn đang cân nhắc chuyển sang microservices: hãy bắt đầu với monolith được
+          thiết kế tốt (domain-driven design giúp như vậy), xác định rõ điểm đau, rồi
+          tách từng bước. Đừng tách vì trend — tách vì vấn đề thực tế.
+        </p>
+
+        <hr />
+
+        <p><em>Bạn đang dùng microservices và gặp vấn đề gì? Chia sẻ ở phần liên hệ nhé!</em></p>
+
+      </article>
+
+      <aside class="toc">
+        <p class="toc__title">Mục lục</p>
+        <div id="toc"></div>
+      </aside>
+    </div>
+
+  </div>
+
+  <!-- Post navigation -->
+  <div class="container">
+    <nav class="post-nav">
+      <span></span><!-- no prev -->
+      <a href="docker-compose-thuc-chien.html" class="post-nav__item post-nav__item--next">
+        <span class="post-nav__label">Bài tiếp theo →</span>
+        <span class="post-nav__title">Docker Compose thực chiến — quản lý multi-container dễ như ăn cháo</span>
+      </a>
+    </nav>
+  </div>
+</main>
+
+<script src="../shared.js"></script>
+</body>
+</html>

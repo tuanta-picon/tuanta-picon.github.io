@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tối ưu PostgreSQL: Index không phải là cây đũa thần — tuanta</title>
+  <meta name="description" content="Cách đọc EXPLAIN ANALYZE, chọn đúng loại index và tránh những cạm bẫy phổ biến khi tối ưu PostgreSQL." />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<main>
+  <div class="container">
+
+    <nav class="breadcrumb">
+      <a href="../index.html">Trang chủ</a>
+      <span class="breadcrumb__sep">/</span>
+      <a href="../index.html#posts">Bài viết</a>
+      <span class="breadcrumb__sep">/</span>
+      <span>Tối ưu PostgreSQL</span>
+    </nav>
+
+    <header class="article-header">
+      <div class="article-header__tags">
+        <span class="tag tag--cat">Database</span>
+        <span class="tag">PostgreSQL</span>
+      </div>
+      <h1 class="article-title">Tối ưu PostgreSQL: Index không phải là cây đũa thần</h1>
+      <div class="article-meta">
+        <span class="article-meta__author">
+          <span class="article-meta__avatar">TA</span>
+          Tuan Anh
+        </span>
+        <span class="article-meta__sep">·</span>
+        <span>20 tháng 1, 2026</span>
+        <span class="article-meta__sep">·</span>
+        <span>⏱ 14 phút đọc</span>
+      </div>
+    </header>
+
+    <div class="post-layout">
+      <article class="article-body">
+
+        <p>
+          "Thêm index vào cho nhanh" — câu nói nghe nhiều đến mức trở thành phản xạ khi query
+          chậm. Nhưng index không phải lúc nào cũng giúp ích, thậm chí đôi khi làm mọi thứ
+          tệ hơn nếu dùng sai. Bài này mình chia sẻ cách tiếp cận tối ưu query PostgreSQL
+          một cách có hệ thống.
+        </p>
+
+        <h2 id="explain-analyze">Bước đầu tiên: đọc EXPLAIN ANALYZE</h2>
+
+        <p>
+          Trước khi thêm bất kỳ index nào, hãy hiểu query đang làm gì. <code>EXPLAIN ANALYZE</code>
+          cho bạn thấy execution plan thực tế và thời gian thực thi từng bước:
+        </p>
+
+<pre><code>EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT u.name, COUNT(o.id) as order_count
+FROM users u
+LEFT JOIN orders o ON o.user_id = u.id
+WHERE u.created_at > '2025-01-01'
+GROUP BY u.id, u.name
+ORDER BY order_count DESC
+LIMIT 20;</code></pre>
+
+        <p>Output sẽ trông như thế này — học cách đọc nó là kỹ năng quan trọng nhất:</p>
+
+<pre><code>Limit  (cost=1247.32..1247.37 rows=20) (actual time=45.231..45.238 rows=20)
+  -> Sort  (cost=1247.32..1252.32 rows=2000) (actual time=45.229..45.232 rows=20)
+       Sort Key: (count(o.id)) DESC
+       -> Hash Left Join  (cost=89.50..1197.50 rows=2000) (actual time=2.103..43.891 rows=5000)
+             Hash Cond: (o.user_id = u.id)
+             -> Seq Scan on orders o  (cost=0..892.00 rows=45000)  ← ĐÂY LÀ VẤN ĐỀ
+             -> Hash  (cost=64.50..64.50 rows=2000)
+                   -> Index Scan on users u  (cost=0.29..64.50 rows=2000)</code></pre>
+
+        <p>
+          <code>Seq Scan on orders</code> với 45,000 rows — PostgreSQL đang quét toàn bộ bảng.
+          Đây là lúc cần index.
+        </p>
+
+        <h2 id="cac-loai-index">Các loại index và khi nào dùng</h2>
+
+        <h3 id="b-tree">B-tree (mặc định)</h3>
+
+        <p>
+          B-tree phù hợp cho hầu hết trường hợp: so sánh <code>=</code>, <code>&lt;</code>,
+          <code>&gt;</code>, <code>BETWEEN</code>, <code>LIKE 'abc%'</code> (prefix). Đây là
+          index bạn sẽ dùng 90% thời gian.
+        </p>
+
+<pre><code>CREATE INDEX idx_orders_user_id ON orders(user_id);
+CREATE INDEX idx_users_created_at ON users(created_at)
+  WHERE created_at > '2024-01-01';  -- partial index: chỉ index data cần thiết</code></pre>
+
+        <h3 id="gin-gist">GIN / GiST — cho full-text search và JSON</h3>
+
+<pre><code>-- Full-text search
+CREATE INDEX idx_articles_fts ON articles
+  USING GIN (to_tsvector('vietnamese', title || ' ' || body));
+
+-- JSONB containment
+CREATE INDEX idx_meta ON products USING GIN (metadata jsonb_path_ops);
+
+-- Sau đó query:
+SELECT * FROM products WHERE metadata @> '{"color": "red"}';</code></pre>
+
+        <h3 id="multicolumn">Composite Index — thứ tự cột quan trọng</h3>
+
+        <p>
+          <code>CREATE INDEX ON orders(user_id, created_at)</code> có thể được dùng cho:
+        </p>
+
+        <ul>
+          <li>Query lọc theo <code>user_id</code> ✅</li>
+          <li>Query lọc theo cả <code>user_id</code> <em>và</em> <code>created_at</code> ✅</li>
+          <li>Query chỉ lọc theo <code>created_at</code> ✗ (phải là cột đầu tiên)</li>
+        </ul>
+
+        <p>
+          Nguyên tắc: cột có <strong>selectivity cao</strong> (nhiều giá trị khác nhau) và
+          thường dùng để filter đặt trước.
+        </p>
+
+        <h2 id="khi-index-khong-giup">Khi nào index KHÔNG giúp ích</h2>
+
+        <ul>
+          <li>
+            <strong>Low-cardinality columns</strong>: cột <code>status</code> chỉ có 3 giá trị
+            (active/inactive/deleted) — index B-tree gần như vô dụng vì 33% row match.
+            Dùng partial index hoặc bitmapOr thay thế.
+          </li>
+          <li>
+            <strong>Hàm trên column</strong>: <code>WHERE LOWER(email) = '...'</code> sẽ
+            không dùng index trên <code>email</code>. Phải tạo expression index:
+            <code>CREATE INDEX ON users (LOWER(email))</code>.
+          </li>
+          <li>
+            <strong>Implicit type casting</strong>: so sánh <code>WHERE user_id = '123'</code>
+            (string) khi <code>user_id</code> là integer sẽ bỏ qua index.
+          </li>
+          <li>
+            <strong>Bảng nhỏ</strong>: với bảng vài nghìn row, sequential scan thường nhanh hơn
+            index scan vì tránh được overhead.
+          </li>
+        </ul>
+
+        <h2 id="chi-phi-index">Chi phí ẩn của index</h2>
+
+        <p>
+          Mỗi index có chi phí:
+        </p>
+
+        <ul>
+          <li><strong>Storage</strong>: index B-tree thường chiếm 20-50% kích thước của dữ liệu gốc.</li>
+          <li><strong>Write overhead</strong>: mỗi INSERT/UPDATE/DELETE phải cập nhật tất cả index. Bảng nhiều index → write chậm hơn đáng kể.</li>
+          <li><strong>Vacuum cost</strong>: index bloat sau nhiều update/delete. Cần monitor và REINDEX định kỳ.</li>
+        </ul>
+
+        <blockquote>
+          <p>Quy tắc của mình: chỉ thêm index khi đã chứng minh được query chậm, và đo lại sau khi thêm để xác nhận hiệu quả.</p>
+        </blockquote>
+
+        <h2 id="cong-cu-huu-ich">Công cụ hữu ích</h2>
+
+<pre><code>-- Tìm index chưa bao giờ được dùng
+SELECT schemaname, tablename, indexname, idx_scan
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0 AND indexname NOT LIKE '%pkey%'
+ORDER BY schemaname, tablename;
+
+-- Tìm query chậm nhất (cần pg_stat_statements extension)
+SELECT query, calls, mean_exec_time, total_exec_time
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC
+LIMIT 10;</code></pre>
+
+        <h2 id="ket-luan">Kết luận</h2>
+
+        <p>
+          Index là công cụ mạnh nhưng không phải thuốc chữa bách bệnh. Quy trình đúng:
+          <strong>đo → phân tích → thêm index → đo lại → xem xét chi phí</strong>.
+          Đừng thêm index "phòng hờ" — chúng sẽ ăn tài nguyên của bạn trong im lặng.
+        </p>
+
+        <hr />
+
+        <p><em>Bạn đã từng gặp trường hợp thêm index mà query còn chậm hơn chưa? Mình đã gặp — và bài học đó tốn của mình một buổi debug.</em></p>
+
+      </article>
+
+      <aside class="toc">
+        <p class="toc__title">Mục lục</p>
+        <div id="toc"></div>
+      </aside>
+    </div>
+
+  </div>
+
+  <div class="container">
+    <nav class="post-nav">
+      <a href="typescript-tinh-nang-hay.html" class="post-nav__item">
+        <span class="post-nav__label">← Bài trước</span>
+        <span class="post-nav__title">10 tính năng TypeScript ít người dùng nhưng cực kỳ hữu ích</span>
+      </a>
+      <a href="pull-request-chat-luong.html" class="post-nav__item post-nav__item--next">
+        <span class="post-nav__label">Bài tiếp theo →</span>
+        <span class="post-nav__title">Làm thế nào để viết Pull Request mà reviewer "thích mê"</span>
+      </a>
+    </nav>
+  </div>
+</main>
+
+<script src="../shared.js"></script>
+</body>
+</html>

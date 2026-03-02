@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bắt đầu với Go — ngôn ngữ của sự đơn giản và hiệu năng cao — tuanta</title>
+  <meta name="description" content="Tại sao Go ngày càng được ưa chuộng trong backend? Cú pháp, goroutines, channels và REST API đầu tiên." />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<main>
+  <div class="container">
+
+    <nav class="breadcrumb">
+      <a href="../index.html">Trang chủ</a>
+      <span class="breadcrumb__sep">/</span>
+      <a href="../index.html#posts">Bài viết</a>
+      <span class="breadcrumb__sep">/</span>
+      <span>Bắt đầu với Go</span>
+    </nav>
+
+    <header class="article-header">
+      <div class="article-header__tags">
+        <span class="tag tag--cat">Go</span>
+        <span class="tag">Backend</span>
+      </div>
+      <h1 class="article-title">Bắt đầu với Go — ngôn ngữ của sự đơn giản và hiệu năng cao</h1>
+      <div class="article-meta">
+        <span class="article-meta__author">
+          <span class="article-meta__avatar">TA</span>
+          Tuan Anh
+        </span>
+        <span class="article-meta__sep">·</span>
+        <span>22 tháng 12, 2025</span>
+        <span class="article-meta__sep">·</span>
+        <span>⏱ 16 phút đọc</span>
+      </div>
+    </header>
+
+    <div class="post-layout">
+      <article class="article-body">
+
+        <p>
+          Khi mình lần đầu nghe về Go (hay Golang), phản ứng đầu tiên là: "Thêm một ngôn ngữ
+          nữa à?". Nhưng sau khi dùng thực tế, mình hiểu tại sao nhiều công ty — từ Google,
+          Uber đến Cloudflare — chọn Go cho infrastructure của họ. Bài này là lý do tại sao
+          và cách bắt đầu.
+        </p>
+
+        <h2 id="tai-sao-go">Tại sao Go?</h2>
+
+        <p>
+          Go được thiết kế với triết lý đơn giản hơn Java/C++ nhưng nhanh hơn Python/Ruby.
+          Những điểm nổi bật:
+        </p>
+
+        <ul>
+          <li><strong>Compile nhanh</strong>: project lớn compile trong vài giây, không phải vài phút.</li>
+          <li><strong>Runtime nhanh</strong>: near C performance, GC hiệu quả, low latency.</li>
+          <li><strong>Concurrency first-class</strong>: goroutines và channels được build sẵn vào ngôn ngữ.</li>
+          <li><strong>Static binary</strong>: build ra một file binary, không cần runtime, deploy dễ như copy file.</li>
+          <li><strong>Standard library mạnh</strong>: HTTP server, JSON, crypto, testing — đủ dùng mà không cần framework.</li>
+        </ul>
+
+        <h2 id="cu-phap-co-ban">Cú pháp cơ bản</h2>
+
+        <p>Go có cú pháp tối giản. Không có class, không có inheritance, không có exception:</p>
+
+<pre><code>package main
+
+import (
+    "fmt"
+    "errors"
+)
+
+// Struct thay cho class
+type User struct {
+    ID    int
+    Name  string
+    Email string
+}
+
+// Method gắn với struct
+func (u User) String() string {
+    return fmt.Sprintf("%s <%s>", u.Name, u.Email)
+}
+
+// Multiple return values — cách Go xử lý error
+func findUser(id int) (User, error) {
+    if id <= 0 {
+        return User{}, errors.New("invalid id")
+    }
+    return User{ID: id, Name: "Tuan", Email: "tuan@example.com"}, nil
+}
+
+func main() {
+    user, err := findUser(1)
+    if err != nil {
+        fmt.Println("Error:", err)
+        return
+    }
+    fmt.Println(user)  // Tuan <tuan@example.com>
+}</code></pre>
+
+        <p>
+          Lưu ý quan trọng: Go không có <code>try/catch</code>. Error được trả về như một
+          giá trị thông thường — điều này buộc bạn phải xử lý error một cách explicit.
+          Nghe có vẻ dài dòng, nhưng code trở nên rất predictable.
+        </p>
+
+        <h2 id="goroutines-va-channels">Goroutines và Channels</h2>
+
+        <p>
+          Đây là "killer feature" của Go. Goroutine là lightweight thread — bạn có thể
+          chạy hàng triệu goroutine trên một máy thông thường. Channel là cơ chế giao tiếp
+          an toàn giữa các goroutine.
+        </p>
+
+<pre><code>package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+func fetchData(id int, wg *sync.WaitGroup, results chan<- string) {
+    defer wg.Done()
+    // Giả lập fetch data
+    results <- fmt.Sprintf("data from source %d", id)
+}
+
+func main() {
+    var wg sync.WaitGroup
+    results := make(chan string, 5)
+
+    // Chạy 5 goroutine đồng thời
+    for i := 1; i <= 5; i++ {
+        wg.Add(1)
+        go fetchData(i, &wg, results)
+    }
+
+    // Đóng channel khi tất cả goroutine xong
+    go func() {
+        wg.Wait()
+        close(results)
+    }()
+
+    // Đọc kết quả
+    for result := range results {
+        fmt.Println(result)
+    }
+}</code></pre>
+
+        <h2 id="rest-api-don-gian">REST API đơn giản với standard library</h2>
+
+        <p>
+          Go có HTTP server built-in, không cần Express hay Flask:
+        </p>
+
+<pre><code>package main
+
+import (
+    "encoding/json"
+    "log"
+    "net/http"
+)
+
+type User struct {
+    ID   int    `json:"id"`
+    Name string `json:"name"`
+}
+
+func usersHandler(w http.ResponseWriter, r *http.Request) {
+    users := []User{
+        {ID: 1, Name: "Tuan Anh"},
+        {ID: 2, Name: "Minh Khoa"},
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(users)
+}
+
+func main() {
+    mux := http.NewServeMux()
+    mux.HandleFunc("GET /api/users", usersHandler)
+
+    log.Println("Server running on :8080")
+    log.Fatal(http.ListenAndServe(":8080", mux))
+}</code></pre>
+
+        <p>Chạy lên và test:</p>
+
+<pre><code>go run main.go
+curl http://localhost:8080/api/users
+# [{"id":1,"name":"Tuan Anh"},{"id":2,"name":"Minh Khoa"}]</code></pre>
+
+        <h2 id="nhung-dieu-can-lam-quen">Những điều cần làm quen</h2>
+
+        <ul>
+          <li>
+            <strong>Không có generics... à có rồi</strong>: Go 1.18+ có generics. Nhưng cộng đồng
+            vẫn ưa interface{} / any cho nhiều trường hợp.
+          </li>
+          <li>
+            <strong>Error handling verbose</strong>: <code>if err != nil</code> xuất hiện rất
+            nhiều. Go 2 đang cải thiện điều này.
+          </li>
+          <li>
+            <strong>Không có OOP truyền thống</strong>: kết hợp struct + interface + embedding
+            thay cho class hierarchy.
+          </li>
+          <li>
+            <strong>Package management</strong>: dùng Go modules (<code>go.mod</code>). Tương tự
+            npm hay pip nhưng đơn giản hơn.
+          </li>
+        </ul>
+
+        <h2 id="ket-luan">Kết luận</h2>
+
+        <p>
+          Go là ngôn ngữ được thiết kế để <em>productive</em> trong các hệ thống lớn với team
+          nhiều người. Cú pháp đơn giản đến mức gần như nhàm chán — và đó là ưu điểm.
+          Khi toàn team viết Go theo một kiểu, code dễ đọc, dễ maintain.
+        </p>
+
+        <p>
+          Nếu bạn đang làm backend và chưa thử Go, hãy dành một buổi tối. Build một HTTP server
+          nhỏ, feel concurrency với goroutines. Bạn có thể sẽ bị thuyết phục như mình.
+        </p>
+
+        <hr />
+
+        <p><em>Bạn đang dùng Go cho project nào? Hoặc có câu hỏi gì về Go? Ping mình nhé!</em></p>
+
+      </article>
+
+      <aside class="toc">
+        <p class="toc__title">Mục lục</p>
+        <div id="toc"></div>
+      </aside>
+    </div>
+
+  </div>
+
+  <div class="container">
+    <nav class="post-nav">
+      <a href="pull-request-chat-luong.html" class="post-nav__item">
+        <span class="post-nav__label">← Bài trước</span>
+        <span class="post-nav__title">Làm thế nào để viết Pull Request mà reviewer "thích mê"</span>
+      </a>
+      <a href="remote-work-mot-nam.html" class="post-nav__item post-nav__item--next">
+        <span class="post-nav__label">Bài tiếp theo →</span>
+        <span class="post-nav__title">Một năm làm việc remote — những điều không ai nói với bạn</span>
+      </a>
+    </nav>
+  </div>
+</main>
+
+<script src="../shared.js"></script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Docker Compose thực chiến — tuanta</title>
+  <meta name="description" content="Hướng dẫn từng bước xây dựng môi trường dev hoàn chỉnh với Docker Compose." />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<main>
+  <div class="container">
+
+    <nav class="breadcrumb">
+      <a href="../index.html">Trang chủ</a>
+      <span class="breadcrumb__sep">/</span>
+      <a href="../index.html#posts">Bài viết</a>
+      <span class="breadcrumb__sep">/</span>
+      <span>Docker Compose thực chiến</span>
+    </nav>
+
+    <header class="article-header">
+      <div class="article-header__tags">
+        <span class="tag tag--cat">DevOps</span>
+        <span class="tag">Docker</span>
+      </div>
+      <h1 class="article-title">Docker Compose thực chiến — quản lý multi-container dễ như ăn cháo</h1>
+      <div class="article-meta">
+        <span class="article-meta__author">
+          <span class="article-meta__avatar">TA</span>
+          Tuan Anh
+        </span>
+        <span class="article-meta__sep">·</span>
+        <span>15 tháng 2, 2026</span>
+        <span class="article-meta__sep">·</span>
+        <span>⏱ 8 phút đọc</span>
+      </div>
+    </header>
+
+    <div class="post-layout">
+      <article class="article-body">
+
+        <p>
+          Bất kỳ dự án web nào cũng cần ít nhất vài thứ chạy song song: ứng dụng, database,
+          cache, message queue… Trước kia, mình phải start từng thứ thủ công, nhớ port, nhớ
+          config. Kể từ khi biết đến Docker Compose, mọi thứ thay đổi hoàn toàn.
+        </p>
+
+        <h2 id="docker-compose-la-gi">Docker Compose là gì?</h2>
+
+        <p>
+          Docker Compose là công cụ giúp bạn định nghĩa và chạy <strong>nhiều container Docker</strong>
+          cùng lúc thông qua một file cấu hình YAML duy nhất. Với một lệnh
+          <code>docker compose up</code>, toàn bộ hệ thống của bạn sẽ sẵn sàng.
+        </p>
+
+        <h2 id="cau-truc-file">Cấu trúc file docker-compose.yml</h2>
+
+        <p>
+          File Compose được chia thành các khối chính: <code>services</code>, <code>networks</code>
+          và <code>volumes</code>. Đây là ví dụ một stack web điển hình:
+        </p>
+
+<pre><code>services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://user:pass@db:5432/mydb
+      REDIS_URL: redis://cache:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    networks:
+      - backend
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: mydb
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  cache:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  pg_data:</code></pre>
+
+        <h2 id="cac-lenh-thuong-dung">Các lệnh thường dùng</h2>
+
+        <p>Đây là những lệnh mình dùng hàng ngày:</p>
+
+        <ul>
+          <li><code>docker compose up -d</code> — khởi động tất cả service ở chế độ nền</li>
+          <li><code>docker compose down</code> — dừng và xóa container (giữ nguyên volume)</li>
+          <li><code>docker compose down -v</code> — dừng và xóa cả volume (reset data)</li>
+          <li><code>docker compose logs -f app</code> — xem log realtime của service <code>app</code></li>
+          <li><code>docker compose exec db psql -U user mydb</code> — truy cập trực tiếp PostgreSQL</li>
+          <li><code>docker compose build --no-cache</code> — rebuild image từ đầu</li>
+        </ul>
+
+        <h2 id="dev-vs-prod">Tách cấu hình dev / staging / prod</h2>
+
+        <p>
+          Đừng dùng chung một file Compose cho tất cả môi trường. Hãy tận dụng tính năng
+          <strong>override file</strong>:
+        </p>
+
+<pre><code># Cấu trúc khuyến nghị
+docker-compose.yml          # base (services, networks, volumes)
+docker-compose.dev.yml      # override cho dev (hot reload, debug port…)
+docker-compose.prod.yml     # override cho prod (replica, resource limit…)
+
+# Chạy môi trường dev
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up</code></pre>
+
+        <p>
+          File dev có thể mount source code để hot reload mà không cần rebuild image:
+        </p>
+
+<pre><code># docker-compose.dev.yml
+services:
+  app:
+    volumes:
+      - .:/app          # mount source code
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+    command: npm run dev</code></pre>
+
+        <h2 id="healthcheck-va-depends-on">Healthcheck và depends_on</h2>
+
+        <p>
+          Một lỗi hay gặp của người mới là rely vào <code>depends_on</code> để đảm bảo
+          database ready trước khi app connect. Nhưng <code>depends_on</code> chỉ đảm bảo
+          container <em>đã start</em>, không đảm bảo service <em>đã sẵn sàng</em>.
+        </p>
+
+        <p>
+          Giải pháp đúng: kết hợp <code>healthcheck</code> trong service db và
+          <code>condition: service_healthy</code> trong depends_on — như ví dụ ở trên.
+          Cách này đảm bảo app chỉ start sau khi PostgreSQL thực sự nhận được kết nối.
+        </p>
+
+        <h2 id="ket-luan">Kết luận</h2>
+
+        <p>
+          Docker Compose biến việc setup môi trường dev từ "mất cả buổi sáng" thành
+          "một lệnh". Khi onboard thành viên mới, chỉ cần: clone repo, chạy
+          <code>docker compose up</code>, xong. Không cần tài liệu dài dòng về cách cài
+          từng dependency.
+        </p>
+
+        <hr />
+
+        <p><em>File <code>docker-compose.yml</code> của bạn đã được commit vào repo chưa? Đó là một trong những thứ đầu tiên mình commit trong mọi project.</em></p>
+
+      </article>
+
+      <aside class="toc">
+        <p class="toc__title">Mục lục</p>
+        <div id="toc"></div>
+      </aside>
+    </div>
+
+  </div>
+
+  <div class="container">
+    <nav class="post-nav">
+      <a href="microservices-architecture.html" class="post-nav__item">
+        <span class="post-nav__label">← Bài trước</span>
+        <span class="post-nav__title">Kiến trúc Microservices: từ lý thuyết đến thực tế</span>
+      </a>
+      <a href="typescript-tinh-nang-hay.html" class="post-nav__item post-nav__item--next">
+        <span class="post-nav__label">Bài tiếp theo →</span>
+        <span class="post-nav__title">10 tính năng TypeScript ít người dùng nhưng cực kỳ hữu ích</span>
+      </a>
+    </nav>
+  </div>
+</main>
+
+<script src="../shared.js"></script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>10 tính năng TypeScript ít người dùng — tuanta</title>
+  <meta name="description" content="Khám phá những gem bị bỏ qua trong TypeScript: template literal types, const assertions, satisfies và nhiều hơn nữa." />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<main>
+  <div class="container">
+
+    <nav class="breadcrumb">
+      <a href="../index.html">Trang chủ</a>
+      <span class="breadcrumb__sep">/</span>
+      <a href="../index.html#posts">Bài viết</a>
+      <span class="breadcrumb__sep">/</span>
+      <span>TypeScript nâng cao</span>
+    </nav>
+
+    <header class="article-header">
+      <div class="article-header__tags">
+        <span class="tag tag--cat">TypeScript</span>
+        <span class="tag">JavaScript</span>
+      </div>
+      <h1 class="article-title">10 tính năng TypeScript ít người dùng nhưng cực kỳ hữu ích</h1>
+      <div class="article-meta">
+        <span class="article-meta__author">
+          <span class="article-meta__avatar">TA</span>
+          Tuan Anh
+        </span>
+        <span class="article-meta__sep">·</span>
+        <span>3 tháng 2, 2026</span>
+        <span class="article-meta__sep">·</span>
+        <span>⏱ 10 phút đọc</span>
+      </div>
+    </header>
+
+    <div class="post-layout">
+      <article class="article-body">
+
+        <p>
+          Phần lớn dev TypeScript chỉ dùng khoảng 20% tính năng ngôn ngữ này. Phần còn lại —
+          những thứ thực sự giúp code type-safe hơn, ngắn gọn hơn, dễ maintain hơn — bị bỏ qua.
+          Bài viết này giới thiệu 10 tính năng mình hay dùng nhất trong số đó.
+        </p>
+
+        <h2 id="template-literal-types">1. Template Literal Types</h2>
+
+        <p>
+          TypeScript cho phép bạn xây dựng string type từ các type khác, giống template literal
+          trong runtime nhưng ở tầng type:
+        </p>
+
+<pre><code>type Direction = 'left' | 'right' | 'top' | 'bottom';
+type Padding    = `padding-${Direction}`;
+// "padding-left" | "padding-right" | "padding-top" | "padding-bottom"
+
+type EventName  = 'click' | 'focus' | 'blur';
+type Handler    = `on${Capitalize&lt;EventName&gt;}`;
+// "onClick" | "onFocus" | "onBlur"</code></pre>
+
+        <h2 id="const-assertions">2. Const Assertions (<code>as const</code>)</h2>
+
+        <p>
+          Khi bạn khai báo một object hoặc array bình thường, TypeScript sẽ widening type.
+          Thêm <code>as const</code> để giữ nguyên literal type:
+        </p>
+
+<pre><code>// Không có as const — type bị widening
+const config = { env: 'production', port: 3000 };
+// { env: string; port: number }
+
+// Có as const — type chính xác
+const config = { env: 'production', port: 3000 } as const;
+// { readonly env: "production"; readonly port: 3000 }</code></pre>
+
+        <h2 id="satisfies">3. Operator <code>satisfies</code> (TS 4.9+)</h2>
+
+        <p>
+          <code>satisfies</code> cho phép bạn kiểm tra type mà không mất inference. Khác với
+          type annotation thông thường — bạn vẫn giữ được type hẹp hơn của từng property:
+        </p>
+
+<pre><code>const palette = {
+  red:    [255, 0, 0],
+  green:  '#00ff00',
+  blue:   [0, 0, 255],
+} satisfies Record&lt;string, string | number[]&gt;;
+
+// Vẫn giữ được type cụ thể!
+palette.red.map(x =&gt; x * 2);   // OK — TypeScript biết là number[]
+palette.green.toUpperCase();    // OK — TypeScript biết là string</code></pre>
+
+        <h2 id="infer">4. <code>infer</code> trong Conditional Types</h2>
+
+        <p>
+          <code>infer</code> cho phép bạn "trích xuất" một phần type trong conditional type:
+        </p>
+
+<pre><code>// Lấy return type của bất kỳ function nào
+type ReturnType&lt;T&gt; = T extends (...args: any[]) => infer R ? R : never;
+
+// Lấy element type của array
+type ElementType&lt;T&gt; = T extends (infer E)[] ? E : never;
+type N = ElementType&lt;number[]&gt;;  // number
+
+// Unwrap Promise
+type Awaited&lt;T&gt; = T extends Promise&lt;infer V&gt; ? V : T;
+type R = Awaited&lt;Promise&lt;string&gt;&gt;;  // string</code></pre>
+
+        <h2 id="mapped-types">5. Mapped Types với Remapping</h2>
+
+        <p>
+          Bạn có thể transform tất cả key của một type, kể cả đổi tên key bằng
+          <code>as</code> clause:
+        </p>
+
+<pre><code>type Getters&lt;T&gt; = {
+  [K in keyof T as `get${Capitalize&lt;string & K&gt;}`]: () => T[K];
+};
+
+interface User { name: string; age: number; }
+type UserGetters = Getters&lt;User&gt;;
+// { getName: () => string; getAge: () => number; }</code></pre>
+
+        <h2 id="discriminated-unions">6. Discriminated Unions — pattern xử lý state an toàn</h2>
+
+        <p>
+          Thay vì dùng optional fields lộn xộn, hãy dùng discriminated union để model state
+          một cách type-safe:
+        </p>
+
+<pre><code>type RequestState&lt;T&gt; =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: T }
+  | { status: 'error';   error: Error };
+
+function render&lt;T&gt;(state: RequestState&lt;T&gt;) {
+  switch (state.status) {
+    case 'loading': return '...';
+    case 'success': return state.data;  // TypeScript biết data tồn tại
+    case 'error':   return state.error.message;
+  }
+}</code></pre>
+
+        <h2 id="branded-types">7. Branded Types — ngăn nhầm ID</h2>
+
+        <p>
+          <code>UserId</code> và <code>OrderId</code> đều là <code>string</code>. TypeScript mặc
+          định cho phép gán lẫn nhau. Branded types ngăn điều đó:
+        </p>
+
+<pre><code>type Branded&lt;T, Brand&gt; = T & { readonly __brand: Brand };
+type UserId  = Branded&lt;string, 'UserId'&gt;;
+type OrderId = Branded&lt;string, 'OrderId'&gt;;
+
+function getUser(id: UserId) { /* ... */ }
+
+const orderId = '123' as OrderId;
+getUser(orderId);  // ❌ Error! Type 'OrderId' is not assignable to 'UserId'</code></pre>
+
+        <h2 id="using">8. <code>using</code> — Resource Management (TS 5.2+)</h2>
+
+        <p>
+          TypeScript 5.2 hỗ trợ <code>using</code> keyword theo TC39 proposal. Tự động cleanup
+          resource khi ra khỏi scope:
+        </p>
+
+<pre><code>function createDbConnection() {
+  const conn = openConnection();
+  return {
+    query: conn.query.bind(conn),
+    [Symbol.dispose]: () => conn.close(),
+  };
+}
+
+{
+  using db = createDbConnection();
+  await db.query('SELECT * FROM users');
+}  // db.close() được gọi tự động ở đây</code></pre>
+
+        <h2 id="nouncheckedindexedaccess">9. <code>noUncheckedIndexedAccess</code></h2>
+
+        <p>
+          Bật option này trong <code>tsconfig.json</code> để TypeScript cảnh báo khi bạn
+          access array index mà không kiểm tra undefined:
+        </p>
+
+<pre><code>// tsconfig.json
+{ "compilerOptions": { "noUncheckedIndexedAccess": true } }
+
+const arr = [1, 2, 3];
+const first = arr[0];   // type: number | undefined (thay vì number)
+first.toFixed(2);       // ❌ Error — phải check undefined trước</code></pre>
+
+        <h2 id="const-type-parameters">10. Const Type Parameters (TS 5.0+)</h2>
+
+        <p>
+          Thêm <code>const</code> vào generic để giữ nguyên literal type mà không cần
+          <code>as const</code> ở nơi gọi:
+        </p>
+
+<pre><code>function identity&lt;const T&gt;(value: T): T {
+  return value;
+}
+
+const x = identity(['a', 'b', 'c']);
+// type: readonly ["a", "b", "c"]  ← literal, không bị widening thành string[]</code></pre>
+
+        <h2 id="ket-luan">Kết luận</h2>
+
+        <p>
+          TypeScript là một ngôn ngữ rất phong phú. Nếu bạn vẫn đang dùng nó như "JavaScript
+          có type annotation", bạn đang bỏ qua rất nhiều sức mạnh. Hãy thử áp dụng từng
+          tính năng trên vào codebase thực — bạn sẽ thấy lợi ích rõ ràng.
+        </p>
+
+        <hr />
+
+        <p><em>Tính năng TypeScript nào bạn thấy hữu ích nhất? Chia sẻ với mình nhé!</em></p>
+
+      </article>
+
+      <aside class="toc">
+        <p class="toc__title">Mục lục</p>
+        <div id="toc"></div>
+      </aside>
+    </div>
+
+  </div>
+
+  <div class="container">
+    <nav class="post-nav">
+      <a href="docker-compose-thuc-chien.html" class="post-nav__item">
+        <span class="post-nav__label">← Bài trước</span>
+        <span class="post-nav__title">Docker Compose thực chiến</span>
+      </a>
+      <a href="postgresql-index.html" class="post-nav__item post-nav__item--next">
+        <span class="post-nav__label">Bài tiếp theo →</span>
+        <span class="post-nav__title">Tối ưu PostgreSQL: Index không phải là cây đũa thần</span>
+      </a>
+    </nav>
+  </div>
+</main>
+
+<script src="../shared.js"></script>
+</body>
+</html>
