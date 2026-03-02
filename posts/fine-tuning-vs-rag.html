@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fine-tuning vs RAG — khi nào nên chọn cái nào? — tuanta</title>
+  <meta name="description" content="So sánh chi tiết Fine-tuning và RAG: chi phí, độ phức tạp, use case phù hợp và cách kết hợp cả hai trong sản xuất." />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<main>
+  <div class="container">
+
+    <nav class="breadcrumb">
+      <a href="../index.html">Trang chủ</a>
+      <span class="breadcrumb__sep">/</span>
+      <a href="../index.html#posts">Bài viết</a>
+      <span class="breadcrumb__sep">/</span>
+      <span>Fine-tuning vs RAG</span>
+    </nav>
+
+    <header class="article-header">
+      <div class="article-header__tags">
+        <span class="tag tag--cat">LLM</span>
+        <span class="tag">Fine-tuning</span>
+        <span class="tag">RAG</span>
+      </div>
+      <h1 class="article-title">Fine-tuning vs RAG — khi nào nên chọn cái nào?</h1>
+      <div class="article-meta">
+        <span class="article-meta__author">
+          <span class="article-meta__avatar">TA</span>
+          Tuan Anh
+        </span>
+        <span class="article-meta__sep">·</span>
+        <span>1 tháng 3, 2026</span>
+        <span class="article-meta__sep">·</span>
+        <span>⏱ 10 phút đọc</span>
+      </div>
+    </header>
+
+    <div class="post-layout">
+      <article class="article-body">
+
+        <p>
+          Khi muốn LLM hiểu domain của mình — ngôn ngữ nội bộ công ty, sản phẩm đặc thù,
+          quy trình riêng — có hai con đường chính: <strong>Fine-tuning</strong> (dạy lại model)
+          và <strong>RAG</strong> (cho model tra cứu tài liệu). Cả hai đều hữu ích, nhưng
+          trong những tình huống rất khác nhau. Chọn sai sẽ tốn tiền, tốn thời gian và
+          cho kết quả tệ hơn mong đợi.
+        </p>
+
+        <h2 id="fine-tuning-la-gi">Fine-tuning là gì?</h2>
+
+        <p>
+          Fine-tuning là tiếp tục train một pre-trained model trên dataset nhỏ hơn, chuyên
+          biệt hơn. Model cập nhật weights để "ghi nhớ" kiến thức và style từ data bạn cung cấp.
+        </p>
+
+        <p>
+          Có hai loại chính:
+        </p>
+
+        <ul>
+          <li>
+            <strong>Supervised Fine-tuning (SFT)</strong>: train trên cặp (instruction, response)
+            mẫu. Dùng để thay đổi behavior, style hoặc format output.
+          </li>
+          <li>
+            <strong>RLHF / DPO</strong>: train từ human preference. Phức tạp hơn, thường
+            dùng bởi các lab AI lớn.
+          </li>
+        </ul>
+
+        <p>
+          Với developer thông thường, <strong>LoRA / QLoRA</strong> là approach phổ biến nhất —
+          chỉ fine-tune một phần nhỏ parameters, giảm chi phí tính toán đáng kể.
+        </p>
+
+        <h2 id="so-sanh-truc-tiep">So sánh trực tiếp</h2>
+
+        <p>
+          Đây là bảng so sánh mình đúc kết sau khi thử cả hai approach cho production systems:
+        </p>
+
+        <ul>
+          <li><strong>Chi phí ban đầu</strong>: RAG thấp (chỉ cần embedding + vector DB), Fine-tuning cao (GPU time, data prep)</li>
+          <li><strong>Cập nhật dữ liệu</strong>: RAG realtime (thêm doc là xong), Fine-tuning cần retrain (tốn kém)</li>
+          <li><strong>Tính minh bạch</strong>: RAG có thể cite nguồn, Fine-tuning là "black box"</li>
+          <li><strong>Latency</strong>: RAG cao hơn (thêm bước retrieval), Fine-tuning thấp hơn</li>
+          <li><strong>Dữ liệu cần thiết</strong>: RAG không cần labeled data, Fine-tuning cần hàng trăm đến nghìn examples</li>
+          <li><strong>Phù hợp với</strong>: RAG — knowledge retrieval, Fine-tuning — style/behavior/format thay đổi</li>
+        </ul>
+
+        <h2 id="khi-nao-dung-rag">Khi nào nên dùng RAG?</h2>
+
+        <p>RAG là lựa chọn mặc định cho hầu hết trường hợp:</p>
+
+        <ul>
+          <li>
+            <strong>Knowledge base thay đổi thường xuyên</strong>: tài liệu sản phẩm, FAQ,
+            changelog. Fine-tune sẽ outdated ngay sau lần update tiếp theo.
+          </li>
+          <li>
+            <strong>Cần dẫn nguồn</strong>: chatbot pháp lý, y tế, tài chính phải cite
+            nguồn để user có thể verify. RAG tự nhiên hỗ trợ điều này.
+          </li>
+          <li>
+            <strong>Tài liệu lớn</strong>: hàng nghìn trang document không thể fit vào
+            context window. Vector search cho phép truy vấn tức thì.
+          </li>
+          <li>
+            <strong>Budget hạn chế</strong>: RAG với open-source embedding model + Qdrant
+            self-hosted có thể chạy trên một máy chủ nhỏ.
+          </li>
+        </ul>
+
+<pre><code># Use case điển hình cho RAG: internal knowledge base chatbot
+query = "Quy trình onboarding engineering của công ty là gì?"
+
+# Retrieve từ tài liệu HR/Engineering docs
+context = vector_db.search(query, top_k=5)
+
+# Generate với context
+answer = llm.generate(f"Dựa trên tài liệu: {context}\n\nCâu hỏi: {query}")</code></pre>
+
+        <h2 id="khi-nao-fine-tune">Khi nào nên Fine-tune?</h2>
+
+        <p>Fine-tuning phù hợp khi bạn muốn thay đổi <em>cách</em> model respond, không phải <em>kiến thức</em>:</p>
+
+        <ul>
+          <li>
+            <strong>Consistent output format</strong>: model cần luôn trả về JSON theo schema
+            cụ thể, hoặc viết code theo naming convention riêng của team.
+          </li>
+          <li>
+            <strong>Tone / style đặc thù</strong>: chatbot cần nói chuyện theo style thương hiệu
+            rất cụ thể mà prompt engineering không đủ.
+          </li>
+          <li>
+            <strong>Task performance cao</strong>: classification, entity extraction với accuracy
+            yêu cầu cao trên domain cụ thể. Few-shot prompting không đạt được.
+          </li>
+          <li>
+            <strong>Latency critical</strong>: không muốn overhead của retrieval step.
+          </li>
+        </ul>
+
+<pre><code># Fine-tuning data format (OpenAI format)
+training_data = [
+    {
+        "messages": [
+            {"role": "system", "content": "Bạn là trợ lý hỗ trợ khách hàng của Acme Corp..."},
+            {"role": "user",   "content": "Tôi muốn hủy đơn hàng #12345"},
+            {"role": "assistant", "content": "Chào bạn! Mình rất tiếc khi nghe điều này..."}
+        ]
+    },
+    # ... hàng trăm ví dụ tương tự
+]
+
+# Sau đó upload và trigger fine-tuning job qua API</code></pre>
+
+        <h2 id="ket-hop-ca-hai">Kết hợp cả hai — RAG + Fine-tuning</h2>
+
+        <p>
+          Trong production systems phức tạp, thực ra không phải là lựa chọn "hoặc này hoặc kia".
+          Nhiều hệ thống dùng cả hai:
+        </p>
+
+        <ul>
+          <li>
+            <strong>Fine-tune để điều chỉnh style và format</strong>: model biết cách viết
+            response ngắn gọn, professional theo đúng tone thương hiệu.
+          </li>
+          <li>
+            <strong>RAG để cung cấp knowledge</strong>: tài liệu sản phẩm, price list, changelog
+            được retrieve realtime.
+          </li>
+        </ul>
+
+        <blockquote>
+          <p>Heuristic đơn giản: nếu vấn đề là "model không biết thông tin X" → RAG. Nếu vấn đề là "model biết nhưng không respond đúng cách" → Fine-tuning.</p>
+        </blockquote>
+
+        <h2 id="framework-quyet-dinh">Framework quyết định nhanh</h2>
+
+        <p>Trước khi chọn, hãy tự hỏi:</p>
+
+        <ol>
+          <li>Thông tin có thay đổi theo thời gian không? → Có: RAG</li>
+          <li>Tôi có ít nhất 500 ví dụ input-output chất lượng cao không? → Không: RAG</li>
+          <li>Vấn đề là về kiến thức hay về style/format? → Kiến thức: RAG, Style: Fine-tune</li>
+          <li>Tôi có cần cite nguồn không? → Có: RAG</li>
+          <li>Latency < 500ms có là hard requirement không? → Có: Fine-tune (hoặc cache RAG)</li>
+        </ol>
+
+        <p>
+          Nếu bạn trả lời "RAG" cho hầu hết câu hỏi trên — hãy bắt đầu với RAG. Bạn có thể
+          thêm fine-tuning sau khi đã có baseline đo được.
+        </p>
+
+        <h2 id="ket-luan">Kết luận</h2>
+
+        <p>
+          Năm 2023–2024, fine-tuning là "câu trả lời mặc định" cho mọi vấn đề LLM. Ngày nay,
+          với context window ngày càng lớn (128K, 200K token) và chi phí inference giảm mạnh,
+          RAG thường là điểm khởi đầu tốt hơn. Nó nhanh hơn để ship, dễ debug hơn và cập nhật
+          được ngay lập tức.
+        </p>
+
+        <p>
+          Fine-tuning vẫn có vai trò quan trọng — nhưng hãy dùng nó để giải quyết đúng vấn đề
+          mà nó giỏi: format, style và behavior, không phải knowledge injection.
+        </p>
+
+        <hr />
+
+        <p><em>Team bạn đang dùng approach nào? Fine-tuning, RAG, hay kết hợp? Chia sẻ experience nhé!</em></p>
+
+      </article>
+
+      <aside class="toc">
+        <p class="toc__title">Mục lục</p>
+        <div id="toc"></div>
+      </aside>
+    </div>
+
+  </div>
+
+  <div class="container">
+    <nav class="post-nav">
+      <a href="rag-thuc-chien.html" class="post-nav__item">
+        <span class="post-nav__label">← Bài trước</span>
+        <span class="post-nav__title">RAG thực chiến — khi LLM biết đọc tài liệu của bạn</span>
+      </a>
+      <a href="docker-compose-thuc-chien.html" class="post-nav__item post-nav__item--next">
+        <span class="post-nav__label">Bài tiếp theo →</span>
+        <span class="post-nav__title">Docker Compose thực chiến — quản lý multi-container dễ như ăn cháo</span>
+      </a>
+    </nav>
+  </div>
+</main>
+
+<script src="../shared.js"></script>
+</body>
+</html>

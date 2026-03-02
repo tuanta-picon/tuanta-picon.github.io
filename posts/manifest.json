@@ -1,0 +1,138 @@
+{
+  "generated": "2026-03-02",
+  "posts": [
+    {
+      "slug": "microservices-architecture",
+      "title": "Kiến trúc Microservices: từ lý thuyết đến thực tế trong dự án thực",
+      "excerpt": "Những gì mình học được sau 2 năm làm việc với hệ thống Microservices trong dự án thực.",
+      "date": "28 tháng 2, 2026",
+      "dateISO": "2026-02-28",
+      "readTime": 12,
+      "tags": [
+        "Backend",
+        "Architecture"
+      ],
+      "featured": true
+    },
+    {
+      "slug": "prompt-engineering-thuc-chien",
+      "title": "Prompt Engineering thực chiến — viết prompt để LLM làm đúng ý",
+      "excerpt": "Kỹ thuật viết prompt hiệu quả cho LLM: few-shot, chain-of-thought, role prompting và các pattern thực tế trong sản xuất.",
+      "date": "15 tháng 3, 2026",
+      "dateISO": "2026-03-15",
+      "readTime": 11,
+      "tags": [
+        "LLM",
+        "AI",
+        "Prompt Engineering"
+      ],
+      "featured": false
+    },
+    {
+      "slug": "rag-thuc-chien",
+      "title": "RAG thực chiến — khi LLM biết đọc tài liệu của bạn",
+      "excerpt": "Xây dựng hệ thống RAG (Retrieval-Augmented Generation) từ đầu: embedding, vector database, chunking strategy và đánh giá chất lượng.",
+      "date": "5 tháng 3, 2026",
+      "dateISO": "2026-03-05",
+      "readTime": 14,
+      "tags": [
+        "LLM",
+        "RAG",
+        "Vector Database"
+      ],
+      "featured": false
+    },
+    {
+      "slug": "fine-tuning-vs-rag",
+      "title": "Fine-tuning vs RAG — khi nào nên chọn cái nào?",
+      "excerpt": "So sánh chi tiết Fine-tuning và RAG: chi phí, độ phức tạp, use case phù hợp và cách kết hợp cả hai trong sản xuất.",
+      "date": "1 tháng 3, 2026",
+      "dateISO": "2026-03-01",
+      "readTime": 10,
+      "tags": [
+        "LLM",
+        "Fine-tuning",
+        "RAG"
+      ],
+      "featured": false
+    },
+    {
+      "slug": "docker-compose-thuc-chien",
+      "title": "Docker Compose thực chiến — quản lý multi-container dễ như ăn cháo",
+      "excerpt": "Hướng dẫn từng bước xây dựng môi trường dev hoàn chỉnh với Docker Compose.",
+      "date": "15 tháng 2, 2026",
+      "dateISO": "2026-02-15",
+      "readTime": 8,
+      "tags": [
+        "DevOps",
+        "Docker"
+      ],
+      "featured": false
+    },
+    {
+      "slug": "typescript-tinh-nang-hay",
+      "title": "10 tính năng TypeScript ít người dùng nhưng cực kỳ hữu ích",
+      "excerpt": "Khám phá những gem bị bỏ qua trong TypeScript: template literal types, const assertions, satisfies và nhiều hơn nữa.",
+      "date": "3 tháng 2, 2026",
+      "dateISO": "2026-02-03",
+      "readTime": 10,
+      "tags": [
+        "TypeScript",
+        "JavaScript"
+      ],
+      "featured": false
+    },
+    {
+      "slug": "postgresql-index",
+      "title": "Tối ưu PostgreSQL: Index không phải là cây đũa thần",
+      "excerpt": "Cách đọc EXPLAIN ANALYZE, chọn đúng loại index và tránh những cạm bẫy phổ biến khi tối ưu PostgreSQL.",
+      "date": "20 tháng 1, 2026",
+      "dateISO": "2026-01-20",
+      "readTime": 14,
+      "tags": [
+        "Database",
+        "PostgreSQL"
+      ],
+      "featured": false
+    },
+    {
+      "slug": "pull-request-chat-luong",
+      "title": "Làm thế nào để viết Pull Request mà reviewer \"thích mê\"",
+      "excerpt": "Những thói quen tạo PR chất lượng cao: mô tả rõ ràng, tách nhỏ commits, checklist tự review.",
+      "date": "8 tháng 1, 2026",
+      "dateISO": "2026-01-08",
+      "readTime": 6,
+      "tags": [
+        "Career",
+        "Soft Skill"
+      ],
+      "featured": false
+    },
+    {
+      "slug": "golang-bat-dau",
+      "title": "Bắt đầu với Go — ngôn ngữ của sự đơn giản và hiệu năng cao",
+      "excerpt": "Tại sao Go ngày càng được ưa chuộng trong backend? Cú pháp, goroutines, channels và REST API đầu tiên.",
+      "date": "22 tháng 12, 2025",
+      "dateISO": "2025-12-22",
+      "readTime": 16,
+      "tags": [
+        "Go",
+        "Backend"
+      ],
+      "featured": false
+    },
+    {
+      "slug": "remote-work-mot-nam",
+      "title": "Một năm làm việc remote — những điều không ai nói với bạn",
+      "excerpt": "Sự thật về remote work sau 1 năm trải nghiệm: những điều tốt, những thách thức và cách mình vượt qua.",
+      "date": "5 tháng 12, 2025",
+      "dateISO": "2025-12-05",
+      "readTime": 9,
+      "tags": [
+        "Cuộc sống",
+        "Năng suất"
+      ],
+      "featured": false
+    }
+  ]
+}

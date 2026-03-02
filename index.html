@@ -68,25 +68,15 @@
     <section class="featured" id="posts">
       <div class="container">
         <h2 class="section-title">Bài viết nổi bật</h2>
-        <article class="featured-card">
-          <div class="featured-card__meta">
-            <span class="tag tag--featured">Nổi bật</span>
-            <span class="tag tag--cat">Backend</span>
+        <!-- Populated by script.js from posts/manifest.json -->
+        <div id="featuredPost">
+          <div class="post-skeleton post-skeleton--featured" aria-hidden="true">
+            <div class="skeleton-line skeleton-line--tag"></div>
+            <div class="skeleton-line skeleton-line--title"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line skeleton-line--short"></div>
           </div>
-          <h3 class="featured-card__title">
-            <a href="posts/microservices-architecture.html">Kiến trúc Microservices: từ lý thuyết đến thực tế trong dự án thực</a>
-          </h3>
-          <p class="featured-card__excerpt">
-            Microservices đang là buzzword của ngành, nhưng khi triển khai thực tế bạn sẽ gặp
-            vô số thách thức không được nhắc đến trong sách vở. Bài viết này chia sẻ những gì
-            mình học được sau 2 năm làm việc với hệ thống có hàng chục services.
-          </p>
-          <div class="featured-card__footer">
-            <span class="post-date">📅 28 tháng 2, 2026</span>
-            <span class="read-time">⏱ 12 phút đọc</span>
-            <a href="posts/microservices-architecture.html" class="read-more">Đọc tiếp →</a>
-          </div>
-        </article>
+        </div>
       </div>
     </section>
 
@@ -104,124 +94,21 @@
           </div>
 
           <div class="post-list" id="postList">
-
-            <article class="post-card" data-tags="devops docker">
-              <div class="post-card__tags">
-                <span class="tag">DevOps</span>
-                <span class="tag">Docker</span>
-              </div>
-              <h3 class="post-card__title">
-                <a href="posts/docker-compose-thuc-chien.html">Docker Compose thực chiến — quản lý multi-container dễ như ăn cháo</a>
-              </h3>
-              <p class="post-card__excerpt">
-                Hướng dẫn từng bước xây dựng môi trường dev hoàn chỉnh với Docker Compose,
-                bao gồm database, cache và ứng dụng của bạn trong một file yaml duy nhất.
-              </p>
-              <div class="post-card__footer">
-                <span class="post-date">15 tháng 2, 2026</span>
-                <span class="read-time">8 phút</span>
-              </div>
-            </article>
-
-            <article class="post-card" data-tags="javascript typescript">
-              <div class="post-card__tags">
-                <span class="tag">TypeScript</span>
-                <span class="tag">JavaScript</span>
-              </div>
-              <h3 class="post-card__title">
-                <a href="posts/typescript-tinh-nang-hay.html">10 tính năng TypeScript ít người dùng nhưng cực kỳ hữu ích</a>
-              </h3>
-              <p class="post-card__excerpt">
-                TypeScript có rất nhiều tính năng "ẩn" mà phần lớn dev chỉ dùng một phần nhỏ.
-                Bài viết này giới thiệu những gem bị bỏ qua như template literal types,
-                const assertions và satisfies.
-              </p>
-              <div class="post-card__footer">
-                <span class="post-date">3 tháng 2, 2026</span>
-                <span class="read-time">10 phút</span>
-              </div>
-            </article>
-
-            <article class="post-card" data-tags="database postgresql">
-              <div class="post-card__tags">
-                <span class="tag">Database</span>
-                <span class="tag">PostgreSQL</span>
-              </div>
-              <h3 class="post-card__title">
-                <a href="posts/postgresql-index.html">Tối ưu PostgreSQL: Index không phải là cây đũa thần</a>
-              </h3>
-              <p class="post-card__excerpt">
-                Index giúp query nhanh hơn, nhưng dùng sai cách còn làm chậm hệ thống.
-                Cùng tìm hiểu cách đọc EXPLAIN ANALYZE, chọn đúng loại index và tránh
-                những cạm bẫy phổ biến.
-              </p>
-              <div class="post-card__footer">
-                <span class="post-date">20 tháng 1, 2026</span>
-                <span class="read-time">14 phút</span>
-              </div>
-            </article>
-
-            <article class="post-card" data-tags="career softskill">
-              <div class="post-card__tags">
-                <span class="tag">Career</span>
-                <span class="tag">Soft Skill</span>
-              </div>
-              <h3 class="post-card__title">
-                <a href="posts/pull-request-chat-luong.html">Làm thế nào để viết Pull Request mà reviewer "thích mê"</a>
-              </h3>
-              <p class="post-card__excerpt">
-                Một PR tốt không chỉ là code đúng mà còn phải dễ review. Bài viết chia sẻ
-                những thói quen tạo PR chất lượng cao, từ mô tả, tách nhỏ commits
-                đến checklist tự review.
-              </p>
-              <div class="post-card__footer">
-                <span class="post-date">8 tháng 1, 2026</span>
-                <span class="read-time">6 phút</span>
-              </div>
-            </article>
-
-            <article class="post-card" data-tags="golang backend">
-              <div class="post-card__tags">
-                <span class="tag">Go</span>
-                <span class="tag">Backend</span>
-              </div>
-              <h3 class="post-card__title">
-                <a href="posts/golang-bat-dau.html">Bắt đầu với Go — ngôn ngữ của sự đơn giản và hiệu năng cao</a>
-              </h3>
-              <p class="post-card__excerpt">
-                Tại sao Go ngày càng được ưa chuộng trong backend và infrastructure?
-                Cùng mình khám phá cú pháp, goroutines, channels và xây dựng REST API
-                đầu tiên chỉ với standard library.
-              </p>
-              <div class="post-card__footer">
-                <span class="post-date">22 tháng 12, 2025</span>
-                <span class="read-time">16 phút</span>
-              </div>
-            </article>
-
-            <article class="post-card" data-tags="life productivity">
-              <div class="post-card__tags">
-                <span class="tag">Cuộc sống</span>
-                <span class="tag">Năng suất</span>
-              </div>
-              <h3 class="post-card__title">
-                <a href="posts/remote-work-mot-nam.html">Một năm làm việc remote — những điều không ai nói với bạn</a>
-              </h3>
-              <p class="post-card__excerpt">
-                Remote work nghe có vẻ tuyệt vời — làm việc ở nhà, không kẹt xe, tự do
-                lịch trình. Nhưng sau 1 năm trải nghiệm, đây là những sự thật mà mình
-                ước gì ai đó nói trước.
-              </p>
-              <div class="post-card__footer">
-                <span class="post-date">5 tháng 12, 2025</span>
-                <span class="read-time">9 phút</span>
-              </div>
-            </article>
-
+            <!-- Populated dynamically by script.js -->
+            <div class="post-skeleton" aria-hidden="true"><div class="skeleton-line skeleton-line--tag"></div><div class="skeleton-line skeleton-line--title"></div><div class="skeleton-line"></div></div>
+            <div class="post-skeleton" aria-hidden="true"><div class="skeleton-line skeleton-line--tag"></div><div class="skeleton-line skeleton-line--title"></div><div class="skeleton-line"></div></div>
+            <div class="post-skeleton" aria-hidden="true"><div class="skeleton-line skeleton-line--tag"></div><div class="skeleton-line skeleton-line--title"></div><div class="skeleton-line"></div></div>
+            <div class="post-skeleton" aria-hidden="true"><div class="skeleton-line skeleton-line--tag"></div><div class="skeleton-line skeleton-line--title"></div><div class="skeleton-line"></div></div>
           </div><!-- /.post-list -->
 
           <div class="no-results" id="noResults" style="display:none;">
             <p>Không tìm thấy bài viết nào.</p>
+          </div>
+
+          <div class="load-more-wrap">
+            <button id="loadMoreBtn" class="btn btn--ghost load-more-btn" style="display:none;">
+              Xem thêm bài ↓
+            </button>
           </div>
         </div><!-- /.posts -->
 
@@ -245,6 +132,8 @@
             <div class="tag-cloud">
               <a href="#" class="tag tag--link" data-filter="backend">Backend</a>
               <a href="#" class="tag tag--link" data-filter="devops">DevOps</a>
+              <a href="#" class="tag tag--link" data-filter="llm">LLM / AI</a>
+              <a href="#" class="tag tag--link" data-filter="rag">RAG</a>
               <a href="#" class="tag tag--link" data-filter="javascript">JavaScript</a>
               <a href="#" class="tag tag--link" data-filter="typescript">TypeScript</a>
               <a href="#" class="tag tag--link" data-filter="golang">Go</a>
@@ -257,8 +146,8 @@
           <div class="widget">
             <h4 class="widget__title">Thống kê</h4>
             <ul class="stats-list">
-              <li><span>Bài viết</span><strong>24</strong></li>
-              <li><span>Chủ đề</span><strong>8</strong></li>
+              <li><span>Bài viết</span><strong id="statTotal">—</strong></li>
+              <li><span>Chủ đề</span><strong id="statTags">—</strong></li>
               <li><span>Năm viết blog</span><strong>3</strong></li>
             </ul>
           </div>

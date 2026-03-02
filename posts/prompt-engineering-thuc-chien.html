@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt Engineering thực chiến — viết prompt để LLM làm đúng ý — tuanta</title>
+  <meta name="description" content="Kỹ thuật viết prompt hiệu quả cho LLM: few-shot, chain-of-thought, role prompting và các pattern thực tế trong sản xuất." />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<main>
+  <div class="container">
+
+    <nav class="breadcrumb">
+      <a href="../index.html">Trang chủ</a>
+      <span class="breadcrumb__sep">/</span>
+      <a href="../index.html#posts">Bài viết</a>
+      <span class="breadcrumb__sep">/</span>
+      <span>Prompt Engineering thực chiến</span>
+    </nav>
+
+    <header class="article-header">
+      <div class="article-header__tags">
+        <span class="tag tag--cat">LLM</span>
+        <span class="tag">AI</span>
+        <span class="tag">Prompt Engineering</span>
+      </div>
+      <h1 class="article-title">Prompt Engineering thực chiến — viết prompt để LLM làm đúng ý</h1>
+      <div class="article-meta">
+        <span class="article-meta__author">
+          <span class="article-meta__avatar">TA</span>
+          Tuan Anh
+        </span>
+        <span class="article-meta__sep">·</span>
+        <span>15 tháng 3, 2026</span>
+        <span class="article-meta__sep">·</span>
+        <span>⏱ 11 phút đọc</span>
+      </div>
+    </header>
+
+    <div class="post-layout">
+      <article class="article-body">
+
+        <p>
+          LLM (Large Language Models) như GPT-4, Claude, Gemini đang thay đổi cách chúng ta
+          làm phần mềm. Nhưng ai cũng biết câu chuyện "garbage in, garbage out" — prompt tệ
+          dẫn đến output tệ dù model xịn đến đâu. Prompt Engineering không chỉ là "hỏi đúng
+          câu" mà là một kỹ năng có thể học và cải thiện có hệ thống.
+        </p>
+
+        <h2 id="tai-sao-prompt-quan-trong">Tại sao prompt quan trọng đến vậy?</h2>
+
+        <p>
+          LLM là các mô hình xác suất — chúng không "hiểu" theo nghĩa con người, mà dự đoán
+          token tiếp theo dựa trên context. Prompt chính là context đó. Cùng một model, cùng
+          một câu hỏi nhưng cách đặt vấn đề khác nhau có thể cho kết quả chênh lệch
+          <strong>đáng kinh ngạc</strong>.
+        </p>
+
+        <blockquote>
+          <p>Prompt engineering không phải là hack hay mẹo vặt. Đó là ngôn ngữ giao tiếp với một loại hệ thống hoàn toàn mới.</p>
+        </blockquote>
+
+        <h2 id="zero-shot-few-shot">Zero-shot vs Few-shot prompting</h2>
+
+        <p>
+          <strong>Zero-shot</strong>: chỉ mô tả task, không cho ví dụ. Phù hợp với task đơn giản
+          hoặc khi model đã được fine-tune cho domain đó.
+        </p>
+
+<pre><code>Phân loại sentiment của đoạn text sau:
+"Sản phẩm này thực sự tuyệt vời, tôi rất hài lòng!"
+
+→ Positive</code></pre>
+
+        <p>
+          <strong>Few-shot</strong>: cung cấp vài ví dụ input-output trước khi đưa ra câu hỏi thực.
+          Cực kỳ hiệu quả khi task có format đặc biệt hoặc cần consistent output.
+        </p>
+
+<pre><code>Phân loại sentiment. Ví dụ:
+Text: "Dịch vụ tệ, chờ mãi không thấy."  → Negative
+Text: "Bình thường, không có gì nổi bật." → Neutral
+Text: "Nhân viên thân thiện, rất ấn tượng!" → Positive
+
+Bây giờ phân loại:
+Text: "Giao hàng chậm nhưng sản phẩm đúng như mô tả."
+
+→ Neutral</code></pre>
+
+        <p>
+          Mình thường dùng 3–5 ví dụ. Ít hơn thường không đủ context, nhiều hơn tốn token
+          mà lợi ích tăng thêm ít.
+        </p>
+
+        <h2 id="chain-of-thought">Chain-of-Thought (CoT) — bắt model "nghĩ thành tiếng"</h2>
+
+        <p>
+          Với các task phức tạp cần suy luận nhiều bước, thêm cụm
+          <strong>"Hãy suy nghĩ từng bước"</strong> (hoặc "Let's think step by step") vào
+          cuối prompt có thể cải thiện accuracy đáng kể.
+        </p>
+
+<pre><code># Không có CoT
+Nếu một cửa hàng giảm giá 20% rồi lại tăng 25%, giá có cao hơn ban đầu không?
+→ Không (sai!)
+
+# Có CoT
+Nếu một cửa hàng giảm giá 20% rồi lại tăng 25%, giá có cao hơn ban đầu không?
+Hãy tính từng bước.
+
+→ Giả sử giá ban đầu là 100.
+  Sau giảm 20%: 100 × 0.8 = 80
+  Sau tăng 25%: 80 × 1.25 = 100
+→ Giá bằng ban đầu, không cao hơn. (đúng!)</code></pre>
+
+        <p>
+          Với GPT-4 và Claude, CoT đôi khi được kích hoạt tự động bởi model. Nhưng với task
+          phức tạp, luôn nên explicit.
+        </p>
+
+        <h2 id="role-prompting">Role prompting — đặt model vào vai trò cụ thể</h2>
+
+        <p>
+          Giao cho model một vai trò rõ ràng giúp nó "kéo" đúng kiến thức và phong cách
+          phù hợp từ training data:
+        </p>
+
+<pre><code>Bạn là một senior backend engineer với 10 năm kinh nghiệm về Go và distributed systems.
+Review đoạn code sau và chỉ ra các vấn đề về performance và concurrency safety:
+
+[code here]</code></pre>
+
+        <p>
+          So với prompt không có role, output thường technical hơn, có chiều sâu hơn và ít
+          bị "hallucinate" kiến thức cơ bản.
+        </p>
+
+        <h2 id="system-prompt">System prompt — foundation của mọi chatbot</h2>
+
+        <p>
+          Với các API như OpenAI, Anthropic, system prompt là lớp instruction nền tảng chạy
+          trước mọi cuộc hội thoại. Đây là nơi bạn:
+        </p>
+
+        <ul>
+          <li>Định nghĩa persona và tone (formal, casual, technical)</li>
+          <li>Đặt ra giới hạn những gì model được phép làm</li>
+          <li>Cung cấp context cố định (tên công ty, sản phẩm, FAQ)</li>
+          <li>Format output mong muốn (JSON, Markdown, plain text)</li>
+        </ul>
+
+<pre><code>// System prompt cho một coding assistant
+Bạn là một AI assistant chuyên hỗ trợ lập trình viên Go.
+
+Luôn:
+- Trả lời bằng tiếng Việt trừ khi được yêu cầu khác
+- Code examples phải compilable và production-ready
+- Giải thích "tại sao" chứ không chỉ "như thế nào"
+- Mention trade-offs khi relevant
+
+Không bao giờ:
+- Tạo code có security vulnerabilities rõ ràng
+- Suggest deprecated packages</code></pre>
+
+        <h2 id="output-format">Kiểm soát output format</h2>
+
+        <p>
+          Khi tích hợp LLM vào hệ thống, output phải parseable. Luôn yêu cầu format cụ thể:
+        </p>
+
+<pre><code># Yêu cầu JSON output
+Phân tích đoạn text sau và trả về JSON với các field:
+- sentiment: "positive" | "negative" | "neutral"
+- confidence: số từ 0 đến 1
+- key_phrases: mảng tối đa 3 cụm từ quan trọng nhất
+- language: ngôn ngữ của text
+
+Text: "Sản phẩm đến nhanh nhưng hộp bị móp, may là hàng vẫn tốt."
+
+Chỉ trả về JSON, không có text nào khác.</code></pre>
+
+        <p>
+          Với Claude và GPT-4, bạn cũng có thể dùng structured output mode (JSON mode) ở
+          API level để đảm bảo parse không bao giờ fail.
+        </p>
+
+        <h2 id="cac-anti-pattern">Các anti-pattern cần tránh</h2>
+
+        <ul>
+          <li>
+            <strong>Prompt quá mơ hồ</strong>: "Viết về AI" → model không biết scope, level,
+            audience. Hãy cụ thể: "Viết một đoạn giải thích transformer architecture cho
+            developer không có background ML, dài khoảng 200 chữ."
+          </li>
+          <li>
+            <strong>Nhồi nhét quá nhiều task</strong>: một prompt làm nhiều việc cùng lúc
+            thường bị model drop task. Tách thành nhiều lời gọi nếu cần.
+          </li>
+          <li>
+            <strong>Không test với edge case</strong>: prompt hoạt động tốt với 5 ví dụ đơn
+            giản có thể fail với input thực tế phức tạp hơn. Luôn test với diverse cases.
+          </li>
+          <li>
+            <strong>Assume model nhớ context cũ</strong>: mỗi API call là stateless. Nếu cần
+            multi-turn, phải tự manage conversation history.
+          </li>
+        </ul>
+
+        <h2 id="ket-luan">Kết luận</h2>
+
+        <p>
+          Prompt Engineering là kỹ năng quan trọng cho bất kỳ ai làm việc với LLM —
+          từ product builder đến backend dev tích hợp AI. Iteration nhanh là chìa khóa:
+          viết prompt → test → phân tích failure cases → cải thiện. Và quan trọng nhất:
+          document lại các prompt đã hoạt động tốt, đừng để mất.
+        </p>
+
+        <hr />
+
+        <p><em>Bạn có trick prompt nào hay? Mình muốn nghe trong phần liên hệ!</em></p>
+
+      </article>
+
+      <aside class="toc">
+        <p class="toc__title">Mục lục</p>
+        <div id="toc"></div>
+      </aside>
+    </div>
+
+  </div>
+
+  <div class="container">
+    <nav class="post-nav">
+      <span></span><!-- newest post, no prev -->
+      <a href="rag-thuc-chien.html" class="post-nav__item post-nav__item--next">
+        <span class="post-nav__label">Bài tiếp theo →</span>
+        <span class="post-nav__title">RAG thực chiến — khi LLM biết đọc tài liệu của bạn</span>
+      </a>
+    </nav>
+  </div>
+</main>
+
+<script src="../shared.js"></script>
+</body>
+</html>

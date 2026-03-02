@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG thực chiến — khi LLM biết đọc tài liệu của bạn — tuanta</title>
+  <meta name="description" content="Xây dựng hệ thống RAG (Retrieval-Augmented Generation) từ đầu: embedding, vector database, chunking strategy và đánh giá chất lượng." />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<main>
+  <div class="container">
+
+    <nav class="breadcrumb">
+      <a href="../index.html">Trang chủ</a>
+      <span class="breadcrumb__sep">/</span>
+      <a href="../index.html#posts">Bài viết</a>
+      <span class="breadcrumb__sep">/</span>
+      <span>RAG thực chiến</span>
+    </nav>
+
+    <header class="article-header">
+      <div class="article-header__tags">
+        <span class="tag tag--cat">LLM</span>
+        <span class="tag">RAG</span>
+        <span class="tag">Vector Database</span>
+      </div>
+      <h1 class="article-title">RAG thực chiến — khi LLM biết đọc tài liệu của bạn</h1>
+      <div class="article-meta">
+        <span class="article-meta__author">
+          <span class="article-meta__avatar">TA</span>
+          Tuan Anh
+        </span>
+        <span class="article-meta__sep">·</span>
+        <span>5 tháng 3, 2026</span>
+        <span class="article-meta__sep">·</span>
+        <span>⏱ 14 phút đọc</span>
+      </div>
+    </header>
+
+    <div class="post-layout">
+      <article class="article-body">
+
+        <p>
+          LLM có một vấn đề cốt lõi: kiến thức bị đóng băng tại thời điểm training. Chúng
+          không biết về tài liệu nội bộ công ty bạn, codebase của bạn, hay sự kiện xảy ra
+          sau cutoff date. <strong>RAG (Retrieval-Augmented Generation)</strong> là giải pháp
+          — thay vì train lại model (tốn kém), bạn cho model "tra cứu" tài liệu phù hợp
+          trước khi trả lời.
+        </p>
+
+        <h2 id="rag-hoat-dong-the-nao">RAG hoạt động như thế nào?</h2>
+
+        <p>Pipeline RAG cơ bản gồm 2 giai đoạn:</p>
+
+        <p>
+          <strong>Giai đoạn Indexing</strong> (chạy một lần, hoặc khi tài liệu thay đổi):
+        </p>
+
+        <ul>
+          <li>Load tài liệu (PDF, Markdown, HTML, code...)</li>
+          <li>Chia nhỏ thành chunks (đoạn văn bản vừa đủ)</li>
+          <li>Tạo embedding vector cho từng chunk bằng embedding model</li>
+          <li>Lưu vào vector database (Qdrant, Pinecone, pgvector...)</li>
+        </ul>
+
+        <p>
+          <strong>Giai đoạn Retrieval + Generation</strong> (mỗi lần user hỏi):
+        </p>
+
+        <ul>
+          <li>Tạo embedding cho câu hỏi của user</li>
+          <li>Tìm top-K chunks có embedding gần nhất (cosine similarity)</li>
+          <li>Đưa các chunks đó vào prompt như context</li>
+          <li>LLM trả lời dựa trên context được cung cấp</li>
+        </ul>
+
+        <h2 id="xay-dung-rag-don-gian">Xây dựng RAG đơn giản với Python</h2>
+
+        <p>
+          Dưới đây là một pipeline RAG tối giản dùng OpenAI embeddings và Qdrant:
+        </p>
+
+<pre><code>from openai import OpenAI
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct
+import uuid
+
+client    = OpenAI()
+qdrant    = QdrantClient(":memory:")   # hoặc URL cho production
+COLL      = "docs"
+EMBED_DIM = 1536  # text-embedding-3-small
+
+# ── Tạo collection ──────────────────────────────────────────
+qdrant.create_collection(COLL, vectors_config=VectorParams(
+    size=EMBED_DIM, distance=Distance.COSINE
+))
+
+# ── Indexing ────────────────────────────────────────────────
+def embed(text: str) -> list[float]:
+    return client.embeddings.create(
+        input=text, model="text-embedding-3-small"
+    ).data[0].embedding
+
+def index_chunks(chunks: list[str]):
+    points = [
+        PointStruct(
+            id=str(uuid.uuid4()),
+            vector=embed(chunk),
+            payload={"text": chunk}
+        )
+        for chunk in chunks
+    ]
+    qdrant.upsert(collection_name=COLL, points=points)
+
+# ── Retrieval + Generation ───────────────────────────────────
+def ask(question: str, top_k: int = 4) -> str:
+    q_vec    = embed(question)
+    results  = qdrant.search(COLL, query_vector=q_vec, limit=top_k)
+    context  = "\n\n---\n\n".join(r.payload["text"] for r in results)
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content":
+                "Trả lời dựa trên context được cung cấp. "
+                "Nếu không tìm thấy thông tin, hãy nói rõ."},
+            {"role": "user", "content":
+                f"Context:\n{context}\n\nCâu hỏi: {question}"}
+        ]
+    )
+    return response.choices[0].message.content</code></pre>
+
+        <h2 id="chunking-strategy">Chunking strategy — điều quan trọng nhất bạn thường bỏ qua</h2>
+
+        <p>
+          Chất lượng RAG phụ thuộc rất nhiều vào cách bạn chia tài liệu. Không có cách
+          nào đúng duy nhất, nhưng đây là các lựa chọn phổ biến:
+        </p>
+
+        <h3 id="fixed-size">Fixed-size chunking</h3>
+
+        <p>
+          Chia theo số token cố định (ví dụ: 512 token), có overlap giữa các chunk.
+          Đơn giản, hoạt động ổn với văn bản liên tục.
+        </p>
+
+<pre><code>from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=512,
+    chunk_overlap=64,          # overlap giúp không mất context biên
+    separators=["\n\n", "\n", " ", ""]
+)</code></pre>
+
+        <h3 id="semantic-chunking">Semantic chunking</h3>
+
+        <p>
+          Chia theo ngữ nghĩa — tìm điểm mà embedding thay đổi đột ngột giữa các câu.
+          Phức tạp hơn nhưng giữ nguyên đơn vị ngữ nghĩa, tốt hơn cho tài liệu có cấu trúc.
+        </p>
+
+        <h3 id="document-aware">Document-aware chunking</h3>
+
+        <p>
+          Chia theo cấu trúc tài liệu: markdown headers, PDF sections, code functions.
+          <strong>Mình khuyến nghị approach này cho hầu hết use case thực tế</strong>
+          vì nó giữ nguyên context tự nhiên.
+        </p>
+
+<pre><code># Chia Markdown theo heading
+import re
+
+def chunk_markdown(text: str) -> list[dict]:
+    sections = re.split(r'^#{1,3} .+', text, flags=re.MULTILINE)
+    headers  = re.findall(r'^(#{1,3} .+)', text, flags=re.MULTILINE)
+
+    chunks = []
+    for header, content in zip(headers, sections[1:]):
+        chunks.append({
+            "header": header.strip("# "),
+            "text":   (header + "\n\n" + content).strip()
+        })
+    return chunks</code></pre>
+
+        <h2 id="danh-gia-chat-luong">Đánh giá chất lượng RAG</h2>
+
+        <p>
+          Làm sao biết RAG pipeline của bạn tốt? Hai metric quan trọng nhất:
+        </p>
+
+        <ul>
+          <li>
+            <strong>Context Recall</strong>: các chunk được retrieve có chứa thông tin cần
+            thiết để trả lời không? Đo bằng cách so sánh với ground-truth context.
+          </li>
+          <li>
+            <strong>Answer Faithfulness</strong>: câu trả lời của model có dựa vào context
+            được cung cấp không, hay model đang "hallucinate" thêm thông tin bên ngoài?
+          </li>
+        </ul>
+
+        <p>
+          Framework <strong>RAGAS</strong> tự động đánh giá cả hai metric này bằng cách
+          dùng một LLM khác làm "judge":
+        </p>
+
+<pre><code>from ragas import evaluate
+from ragas.metrics import faithfulness, context_recall
+
+results = evaluate(
+    dataset=your_test_dataset,
+    metrics=[faithfulness, context_recall]
+)
+print(results)
+# {'faithfulness': 0.87, 'context_recall': 0.92}</code></pre>
+
+        <h2 id="cac-van-de-thuong-gap">Các vấn đề thường gặp và cách xử lý</h2>
+
+        <ul>
+          <li>
+            <strong>Retrieve sai chunk</strong>: thường do chunk quá lớn hoặc câu hỏi không
+            match với cách tài liệu được viết. Thử <em>query rewriting</em> — dùng LLM
+            paraphrase câu hỏi trước khi search.
+          </li>
+          <li>
+            <strong>Context window bị tràn</strong>: top-K chunks quá nhiều token. Dùng
+            <em>reranking</em> (cross-encoder) để chọn chunk liên quan nhất từ top-20 rồi
+            chỉ đưa top-4 vào prompt.
+          </li>
+          <li>
+            <strong>Model hallucinate ngoài context</strong>: thêm instruction rõ: "Chỉ trả lời
+            dựa trên context. Nếu không có thông tin, trả lời 'Tôi không tìm thấy thông tin này.'"
+          </li>
+          <li>
+            <strong>Tài liệu lỗi thời</strong>: implement metadata filtering + timestamp.
+            Chỉ retrieve chunk từ tài liệu trong khoảng thời gian nhất định.
+          </li>
+        </ul>
+
+        <h2 id="ket-luan">Kết luận</h2>
+
+        <p>
+          RAG là một trong những pattern hữu ích nhất khi xây dựng ứng dụng AI production.
+          Nó giải quyết vấn đề knowledge cutoff và bảo mật dữ liệu (không cần upload tài liệu
+          nhạy cảm lên training pipeline). Bắt đầu đơn giản, đo lường kỹ, rồi mới tối ưu
+          từng layer.
+        </p>
+
+        <hr />
+
+        <p><em>Bạn đang xây dựng RAG cho use case nào? Mình rất muốn nghe kinh nghiệm thực tế của bạn.</em></p>
+
+      </article>
+
+      <aside class="toc">
+        <p class="toc__title">Mục lục</p>
+        <div id="toc"></div>
+      </aside>
+    </div>
+
+  </div>
+
+  <div class="container">
+    <nav class="post-nav">
+      <a href="prompt-engineering-thuc-chien.html" class="post-nav__item">
+        <span class="post-nav__label">← Bài trước</span>
+        <span class="post-nav__title">Prompt Engineering thực chiến — viết prompt để LLM làm đúng ý</span>
+      </a>
+      <a href="fine-tuning-vs-rag.html" class="post-nav__item post-nav__item--next">
+        <span class="post-nav__label">Bài tiếp theo →</span>
+        <span class="post-nav__title">Fine-tuning vs RAG — khi nào nên chọn cái nào?</span>
+      </a>
+    </nav>
+  </div>
+</main>
+
+<script src="../shared.js"></script>
+</body>
+</html>
